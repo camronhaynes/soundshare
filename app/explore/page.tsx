@@ -16,7 +16,7 @@ export default function ExplorePage() {
     fileUrl: '/default-track.mp3',
     fileSize: 0, // Will be loaded from actual file
     format: 'mp3',
-    uploadedBy: 'soundshare',
+    userId: 'soundshare',
     createdAt: new Date().toISOString()
   };
 

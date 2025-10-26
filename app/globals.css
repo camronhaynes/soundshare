@@ -11,27 +11,119 @@
 }
 
 @layer components {
-  /* Skeumorphic glass card */
+  /* Windows XP Glass Card - Luna Window Chrome */
   .glass-card {
-    @apply bg-dark-surface/50 backdrop-blur-md border border-white/10 rounded-2xl shadow-skeu;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    @apply backdrop-blur-md rounded-lg shadow-lg;
+    background: linear-gradient(180deg,
+      rgba(236, 233, 216, 0.15) 0%,
+      rgba(236, 233, 216, 0.08) 100%
+    );
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.4);
+    border-left-color: rgba(255, 255, 255, 0.3);
+    border-bottom-color: rgba(0, 0, 0, 0.3);
+    border-right-color: rgba(0, 0, 0, 0.2);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.3),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
-  /* Skeumorphic button */
+  /* Windows XP Primary Button (Luna Blue) */
   .skeu-button {
-    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200;
-    @apply bg-gradient-to-br from-plum-600 to-plum-800 hover:from-plum-500 hover:to-plum-700;
-    @apply shadow-skeu hover:shadow-neon-pink;
-    @apply border border-plum-400/30;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    @apply px-6 py-3 rounded-md font-semibold transition-all duration-150;
+    background: linear-gradient(180deg,
+      #E8F4FF 0%,
+      #B3D9FF 45%,
+      #69B3FF 50%,
+      #3D8FE3 100%
+    );
+    border: 2px solid #003C74;
+    border-top-color: #CDEAFF;
+    border-left-color: #A8D8FF;
+    border-bottom-color: #003366;
+    border-right-color: #00478A;
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.6),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(0, 60, 116, 0.2);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    position: relative;
+    color: #000;
   }
 
+  .skeu-button:hover {
+    background: linear-gradient(180deg,
+      #F0F8FF 0%,
+      #C8E5FF 45%,
+      #85C5FF 50%,
+      #5AA3E8 100%
+    );
+    border-top-color: #E0F0FF;
+    border-left-color: #C0E0FF;
+  }
+
+  .skeu-button:active {
+    background: linear-gradient(180deg,
+      #5AA3E8 0%,
+      #85C5FF 50%,
+      #C8E5FF 55%,
+      #E8F4FF 100%
+    );
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.3),
+      inset 1px 1px 3px rgba(0, 0, 0, 0.2),
+      0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(1px);
+  }
+
+  /* Windows XP Secondary Button (Silver/Gray) */
   .skeu-button-secondary {
-    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200;
-    @apply bg-gradient-to-br from-forest-700 to-forest-900 hover:from-forest-600 hover:to-forest-800;
-    @apply shadow-skeu hover:shadow-neon-seafoam;
-    @apply border border-forest-400/30;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    @apply px-6 py-3 rounded-md font-semibold transition-all duration-150;
+    background: linear-gradient(180deg,
+      #FFFFFF 0%,
+      #ECE9D8 45%,
+      #D6D3CE 50%,
+      #ACA899 100%
+    );
+    border: 2px solid #808080;
+    border-top-color: #FFFFFF;
+    border-left-color: #E8E5DC;
+    border-bottom-color: #5A5A5A;
+    border-right-color: #6E6E6E;
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(128, 128, 128, 0.2);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    position: relative;
+    color: #000;
+  }
+
+  .skeu-button-secondary:hover {
+    background: linear-gradient(180deg,
+      #FFFFFF 0%,
+      #F5F3EC 45%,
+      #E0DDD2 50%,
+      #BAAD9D 100%
+    );
+  }
+
+  .skeu-button-secondary:active {
+    background: linear-gradient(180deg,
+      #ACA899 0%,
+      #D6D3CE 50%,
+      #ECE9D8 55%,
+      #FFFFFF 100%
+    );
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.25),
+      inset 1px 1px 3px rgba(0, 0, 0, 0.15),
+      0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(1px);
   }
 
   /* Neon glow text */
@@ -50,29 +142,67 @@
     text-shadow: 0 0 10px rgba(127, 255, 212, 0.8), 0 0 20px rgba(127, 255, 212, 0.5);
   }
 
-  /* Retro waveform container */
+  /* XP Waveform container - Inset panel */
   .waveform-container {
     @apply glass-card p-6;
+    background: linear-gradient(135deg,
+      rgba(20, 20, 30, 0.6) 0%,
+      rgba(30, 30, 45, 0.5) 100%
+    );
+    border: 2px solid rgba(0, 0, 0, 0.4);
+    border-top-color: rgba(0, 0, 0, 0.6);
+    border-left-color: rgba(0, 0, 0, 0.5);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    border-right-color: rgba(255, 255, 255, 0.15);
     box-shadow:
-      inset 0 2px 4px rgba(255, 255, 255, 0.1),
-      0 8px 32px rgba(0, 0, 0, 0.4);
+      inset 2px 2px 4px rgba(0, 0, 0, 0.5),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.4);
   }
 
-  /* Input field skeumorphic */
+  /* XP Input field - Inset text box */
   .skeu-input {
-    @apply px-4 py-3 rounded-lg bg-dark-elevated border border-white/20;
-    @apply focus:outline-none focus:ring-2 focus:ring-plum-500/50 focus:border-plum-400;
-    @apply transition-all duration-200;
+    @apply px-4 py-3 rounded bg-dark-elevated transition-all duration-150;
+    background: linear-gradient(135deg,
+      rgba(30, 30, 40, 0.8) 0%,
+      rgba(40, 40, 55, 0.7) 100%
+    );
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    border-top-color: rgba(0, 0, 0, 0.7);
+    border-left-color: rgba(0, 0, 0, 0.6);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    border-right-color: rgba(255, 255, 255, 0.15);
     box-shadow:
-      inset 0 2px 4px rgba(0, 0, 0, 0.3),
-      0 1px 2px rgba(255, 255, 255, 0.05);
+      inset 2px 2px 3px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.05),
+      0 1px 2px rgba(0, 0, 0, 0.3);
+    color: #fff;
   }
 
-  /* Navigation bar */
+  .skeu-input:focus {
+    @apply outline-none;
+    border-color: rgba(59, 130, 246, 0.6);
+    border-top-color: rgba(29, 78, 216, 0.8);
+    border-left-color: rgba(37, 99, 235, 0.7);
+    box-shadow:
+      inset 2px 2px 3px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(59, 130, 246, 0.1),
+      0 0 0 2px rgba(59, 130, 246, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  /* XP Navigation bar - Window title bar */
   .nav-bar {
-    @apply bg-dark-surface/80 backdrop-blur-xl border-b border-white/10;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    @apply backdrop-blur-xl;
+    background: linear-gradient(180deg,
+      rgba(0, 88, 238, 0.25) 0%,
+      rgba(0, 88, 238, 0.2) 50%,
+      rgba(0, 35, 156, 0.25) 100%
+    );
+    border-bottom: 2px solid rgba(0, 0, 0, 0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -119,103 +249,106 @@
   transform-origin: center;
 }
 
-/* Windows XP Skeuomorphic Buttons */
-.xp-button {
-  background: linear-gradient(
-    180deg,
-    rgba(100, 120, 140, 0.4) 0%,
-    rgba(60, 80, 100, 0.6) 50%,
-    rgba(40, 60, 80, 0.7) 100%
+/* Windows XP Panel - Groupbox/Fieldset style */
+.xp-panel {
+  background: linear-gradient(135deg,
+    rgba(236, 233, 216, 0.1) 0%,
+    rgba(236, 233, 216, 0.05) 100%
   );
-  border: 1px solid rgba(150, 170, 190, 0.3);
-  border-top-color: rgba(180, 200, 220, 0.5);
-  border-left-color: rgba(180, 200, 220, 0.4);
-  border-bottom-color: rgba(40, 50, 60, 0.6);
-  border-right-color: rgba(40, 50, 60, 0.5);
-  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: rgba(255, 255, 255, 0.25);
+  border-left-color: rgba(255, 255, 255, 0.2);
+  border-bottom-color: rgba(0, 0, 0, 0.25);
+  border-right-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.2),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.xp-button::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  right: 1px;
-  height: 40%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.05) 100%
+/* XP Window Chrome - For modal dialogs */
+.xp-window {
+  background: linear-gradient(180deg,
+    rgba(236, 233, 216, 0.2) 0%,
+    rgba(236, 233, 216, 0.15) 100%
   );
+  border: 3px solid;
+  border-color: rgba(59, 130, 246, 0.4) rgba(0, 60, 116, 0.6) rgba(0, 60, 116, 0.7) rgba(59, 130, 246, 0.3);
+  border-radius: 8px 8px 2px 2px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.3),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* XP Title bar */
+.xp-titlebar {
+  background: linear-gradient(180deg,
+    #0058EE 0%,
+    #0058EE 50%,
+    #0A246A 100%
+  );
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  padding: 0.375rem 0.5rem;
   border-radius: 6px 6px 0 0;
-  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.xp-button:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(110, 130, 150, 0.5) 0%,
-    rgba(70, 90, 110, 0.7) 50%,
-    rgba(50, 70, 90, 0.8) 100%
+/* XP Taskbar-style element */
+.xp-taskbar {
+  background: linear-gradient(180deg,
+    #3E6EE8 0%,
+    #2858D8 50%,
+    #1941C4 100%
   );
-  border-top-color: rgba(200, 220, 240, 0.6);
-  border-left-color: rgba(200, 220, 240, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 -2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.xp-button:active {
-  background: linear-gradient(
-    180deg,
-    rgba(40, 60, 80, 0.8) 0%,
-    rgba(60, 80, 100, 0.7) 50%,
-    rgba(80, 100, 120, 0.5) 100%
+/* XP Start button style */
+.xp-start-button {
+  background: linear-gradient(180deg,
+    #7DBE4C 0%,
+    #63A73A 50%,
+    #4A8B29 100%
   );
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 2px solid;
+  border-color: #9DD56A #2D6E16 #2D6E16 #9DD56A;
+  border-radius: 0 24px 24px 0;
+  padding: 0.5rem 1.5rem;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-/* Windows XP Active State (Azure/Luna theme) */
-.xp-button-active {
-  background: linear-gradient(
-    180deg,
-    rgba(59, 130, 246, 0.5) 0%,
-    rgba(37, 99, 235, 0.6) 50%,
-    rgba(29, 78, 216, 0.7) 100%
+.xp-start-button:hover {
+  background: linear-gradient(180deg,
+    #8FD05C 0%,
+    #73B84A 50%,
+    #5A9D39 100%
   );
-  border: 1px solid rgba(96, 165, 250, 0.6);
-  border-top-color: rgba(147, 197, 253, 0.8);
-  border-left-color: rgba(147, 197, 253, 0.7);
-  border-bottom-color: rgba(29, 78, 216, 0.8);
-  border-right-color: rgba(29, 78, 216, 0.7);
-  position: relative;
 }
 
-.xp-button-active::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  right: 1px;
-  height: 40%;
-  background: linear-gradient(
-    180deg,
-    rgba(147, 197, 253, 0.3) 0%,
-    rgba(96, 165, 250, 0.1) 100%
+.xp-start-button:active {
+  background: linear-gradient(180deg,
+    #4A8B29 0%,
+    #63A73A 50%,
+    #7DBE4C 100%
   );
-  border-radius: 6px 6px 0 0;
-  pointer-events: none;
-}
-
-.xp-button-active::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at center,
-    rgba(59, 130, 246, 0.2) 0%,
-    transparent 70%
-  );
-  border-radius: 6px;
-  pointer-events: none;
-  animation: xp-glow-pulse 2s ease-in-out infinite;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes xp-glow-pulse {

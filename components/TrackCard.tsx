@@ -29,17 +29,17 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   // Mastering toggles (simple presets) - now supports multiple simultaneous presets
   const [masteringPresets, setMasteringPresets] = useState<string[]>([]);
 
-  // Effect parameters
-  const [reverbDecay, setReverbDecay] = useState(2.5);
-  const [reverbMix, setReverbMix] = useState(0.5);      // 0 = dry, 1 = wet
+  // Effect parameters - Better defaults for first-time users
+  const [reverbDecay, setReverbDecay] = useState(2.6);
+  const [reverbMix, setReverbMix] = useState(0.35);      // 0 = dry, 1 = wet (reduced from 0.5)
   const [delayTime, setDelayTime] = useState(0.25);
   const [delayFeedback, setDelayFeedback] = useState(0.4);
-  const [delayMix, setDelayMix] = useState(0.3);        // 0 = dry, 1 = wet
-  const [distortionAmount, setDistortionAmount] = useState(0.8);
-  const [distortionMix, setDistortionMix] = useState(0.5); // 0 = dry, 1 = wet
-  const [chorusDepth, setChorusDepth] = useState(0.7);
+  const [delayMix, setDelayMix] = useState(0.25);        // 0 = dry, 1 = wet (reduced from 0.3)
+  const [distortionAmount, setDistortionAmount] = useState(0.25); // FIXED: was 0.8 (way too strong!)
+  const [distortionMix, setDistortionMix] = useState(0.2); // 0 = dry, 1 = wet (reduced from 0.5)
+  const [chorusDepth, setChorusDepth] = useState(0.23);
   const [chorusFrequency, setChorusFrequency] = useState(1.5);
-  const [chorusMix, setChorusMix] = useState(0.5);      // 0 = dry, 1 = wet
+  const [chorusMix, setChorusMix] = useState(0.23);      // 0 = dry, 1 = wet (reduced from 0.5)
 
   const playerRef = useRef<Tone.Player | null>(null);
   const pitchShifterRef = useRef<Tone.PitchShift | null>(null);
@@ -60,28 +60,28 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   useEffect(() => {
     const initAudio = async () => {
       try {
-        // Create effects (all start disconnected/bypassed)
+        // Create effects (all start disconnected/bypassed) with better defaults
         reverbRef.current = new Tone.Reverb({
-          decay: 2.5,
-          wet: 0.5
+          decay: 2.6,
+          wet: 0.35
         });
 
         delayRef.current = new Tone.FeedbackDelay({
           delayTime: 0.25,
           feedback: 0.4,
-          wet: 0.3
+          wet: 0.25
         });
 
         distortionRef.current = new Tone.Distortion({
-          distortion: 0.8,
-          wet: 0.5
+          distortion: 0.25,  // Much more reasonable default
+          wet: 0.2
         });
 
         chorusRef.current = new Tone.Chorus({
           frequency: 1.5,
           delayTime: 3.5,
-          depth: 0.7,
-          wet: 0.5
+          depth: 0.23,
+          wet: 0.23
         });
 
         // Create mastering EQ3 (3-band EQ)
@@ -685,17 +685,19 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
             {/* Modular Parameter Controls for Active Effects */}
             {(reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled) && (
               <div className="mt-6 space-y-4">
-                {/* Reverb Parameters */}
+                {/* Reverb Parameters - Kid-Friendly Design */}
                 {reverbEnabled && (
                   <div className="p-4 rounded-lg bg-neon-blue/10 border border-neon-blue/30 space-y-3">
                     <div className="text-sm font-medium text-neon-blue flex items-center gap-2">
-                      <span>🌊</span> Reverb Controls
+                      <span>🌊</span> Space Vibe
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Decay</span>
-                          <span className="text-neon-blue font-mono">{reverbDecay.toFixed(1)}s</span>
+                          <span className="text-gray-400">Room Size</span>
+                          <span className="text-neon-blue font-mono">
+                            {reverbDecay < 1 ? '🚪 Tiny' : reverbDecay < 3 ? '🏠 Room' : reverbDecay < 6 ? '🏛️ Hall' : '🏔️ Canyon'}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -704,13 +706,19 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.1"
                           value={reverbDecay}
                           onChange={(e) => setReverbDecay(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-blue"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-blue"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>🚪</span>
+                          <span>🏠</span>
+                          <span>🏛️</span>
+                          <span>🏔️</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Dry</span>
-                          <span className="text-gray-500">Wet</span>
+                          <span className="text-gray-400">Effect Amount</span>
+                          <span className="text-neon-blue font-mono">{Math.round(reverbMix * 100)}%</span>
                         </div>
                         <input
                           type="range"
@@ -719,29 +727,30 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={reverbMix}
                           onChange={(e) => setReverbMix(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-blue"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-blue"
                         />
-                        <div className="text-center">
-                          <span className="text-xs text-neon-blue font-mono">
-                            {reverbMix < 0.5 ? '←' : reverbMix > 0.5 ? '→' : '•'}
-                          </span>
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Less</span>
+                          <span>More</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Delay Parameters */}
+                {/* Delay Parameters - Kid-Friendly Design */}
                 {delayEnabled && (
                   <div className="p-4 rounded-lg bg-neon-seafoam/10 border border-neon-seafoam/30 space-y-3">
                     <div className="text-sm font-medium text-neon-seafoam flex items-center gap-2">
-                      <span>⏱️</span> Delay Controls
+                      <span>⏱️</span> Echo Magic
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Time</span>
-                          <span className="text-neon-seafoam font-mono">{(delayTime * 1000).toFixed(0)}ms</span>
+                          <span className="text-gray-400">Echo Gap</span>
+                          <span className="text-neon-seafoam font-mono">
+                            {delayTime < 0.15 ? '💨 Quick' : delayTime < 0.4 ? '👏 Normal' : '🦥 Slow'}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -750,13 +759,20 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={delayTime}
                           onChange={(e) => setDelayTime(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>💨</span>
+                          <span>👏</span>
+                          <span>🦥</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Feedback</span>
-                          <span className="text-neon-seafoam font-mono">{(delayFeedback * 100).toFixed(0)}%</span>
+                          <span className="text-gray-400">Repeats</span>
+                          <span className="text-neon-seafoam font-mono">
+                            {delayFeedback < 0.3 ? '🔂 Few' : delayFeedback < 0.7 ? '🔁 Some' : '♾️ Many'}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -765,13 +781,18 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={delayFeedback}
                           onChange={(e) => setDelayFeedback(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>🔂</span>
+                          <span>🔁</span>
+                          <span>♾️</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Dry</span>
-                          <span className="text-gray-500">Wet</span>
+                          <span className="text-gray-400">Effect Amount</span>
+                          <span className="text-neon-seafoam font-mono">{Math.round(delayMix * 100)}%</span>
                         </div>
                         <input
                           type="range"
@@ -780,29 +801,30 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={delayMix}
                           onChange={(e) => setDelayMix(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-seafoam"
                         />
-                        <div className="text-center">
-                          <span className="text-xs text-neon-seafoam font-mono">
-                            {delayMix < 0.5 ? '←' : delayMix > 0.5 ? '→' : '•'}
-                          </span>
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Less</span>
+                          <span>More</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Distortion Parameters */}
+                {/* Distortion Parameters - Kid-Friendly Design */}
                 {distortionEnabled && (
                   <div className="p-4 rounded-lg bg-neon-pink/10 border border-neon-pink/30 space-y-3">
                     <div className="text-sm font-medium text-neon-pink flex items-center gap-2">
-                      <span>⚡</span> Distortion Controls
+                      <span>⚡</span> Crunch Power
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Amount</span>
-                          <span className="text-neon-pink font-mono">{(distortionAmount * 100).toFixed(0)}%</span>
+                          <span className="text-gray-400">Grit Level</span>
+                          <span className="text-neon-pink font-mono">
+                            {distortionAmount < 0.2 ? '🎸 Soft' : distortionAmount < 0.5 ? '🔥 Medium' : distortionAmount < 0.8 ? '⚡ Heavy' : '💀 Extreme'}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -811,13 +833,19 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={distortionAmount}
                           onChange={(e) => setDistortionAmount(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-pink"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-pink"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>🎸</span>
+                          <span>🔥</span>
+                          <span>⚡</span>
+                          <span>💀</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Dry</span>
-                          <span className="text-gray-500">Wet</span>
+                          <span className="text-gray-400">Effect Amount</span>
+                          <span className="text-neon-pink font-mono">{Math.round(distortionMix * 100)}%</span>
                         </div>
                         <input
                           type="range"
@@ -826,29 +854,30 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={distortionMix}
                           onChange={(e) => setDistortionMix(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-pink"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-neon-pink"
                         />
-                        <div className="text-center">
-                          <span className="text-xs text-neon-pink font-mono">
-                            {distortionMix < 0.5 ? '←' : distortionMix > 0.5 ? '→' : '•'}
-                          </span>
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Less</span>
+                          <span>More</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Chorus Parameters */}
+                {/* Chorus Parameters - Kid-Friendly Design */}
                 {chorusEnabled && (
                   <div className="p-4 rounded-lg bg-plum-400/10 border border-plum-400/30 space-y-3">
                     <div className="text-sm font-medium text-plum-400 flex items-center gap-2">
-                      <span>✨</span> Chorus Controls
+                      <span>✨</span> Sparkle Magic
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Frequency</span>
-                          <span className="text-plum-400 font-mono">{chorusFrequency.toFixed(1)} Hz</span>
+                          <span className="text-gray-400">Wobble Speed</span>
+                          <span className="text-plum-400 font-mono">
+                            {chorusFrequency < 2 ? '🐌 Slow' : chorusFrequency < 5 ? '🐇 Medium' : '🚀 Fast'}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -857,12 +886,17 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.1"
                           value={chorusFrequency}
                           onChange={(e) => setChorusFrequency(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>🐌</span>
+                          <span>🐇</span>
+                          <span>🚀</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-400">Depth</span>
+                          <span className="text-gray-400">Shimmer</span>
                           <span className="text-plum-400 font-mono">{(chorusDepth * 100).toFixed(0)}%</span>
                         </div>
                         <input
@@ -872,13 +906,17 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={chorusDepth}
                           onChange={(e) => setChorusDepth(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
                         />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Subtle</span>
+                          <span>Intense</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Dry</span>
-                          <span className="text-gray-500">Wet</span>
+                          <span className="text-gray-400">Effect Amount</span>
+                          <span className="text-plum-400 font-mono">{Math.round(chorusMix * 100)}%</span>
                         </div>
                         <input
                           type="range"
@@ -887,12 +925,11 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                           step="0.01"
                           value={chorusMix}
                           onChange={(e) => setChorusMix(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-plum-400"
                         />
-                        <div className="text-center">
-                          <span className="text-xs text-plum-400 font-mono">
-                            {chorusMix < 0.5 ? '←' : chorusMix > 0.5 ? '→' : '•'}
-                          </span>
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Less</span>
+                          <span>More</span>
                         </div>
                       </div>
                     </div>

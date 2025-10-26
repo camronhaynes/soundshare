@@ -8,22 +8,36 @@ import { Track } from "@/lib/TracksContext";
 export default function ExplorePage() {
   const { tracks } = useTracks();
 
-  // Default demo track that any user can play with
-  const defaultTrack: Track = {
-    id: 'default-demo',
-    title: 'I - Aphex Twin',
-    filename: 'default-track.mp3',
-    fileUrl: '/default-track.mp3',
-    filePath: '/default-track.mp3',
-    duration: 77, // 1:17 duration of I by Aphex Twin
-    fileSize: 1951744, // ~1.9MB after conversion
-    format: 'MP3',
-    userId: 'soundshare',
-    createdAt: new Date().toISOString()
-  };
+  // Default demo tracks that any user can play with
+  const demoTracks: Track[] = [
+    {
+      id: 'demo-i',
+      title: 'I - Aphex Twin',
+      filename: 'default-track.mp3',
+      fileUrl: '/default-track.mp3',
+      filePath: '/default-track.mp3',
+      duration: 77, // 1:17 duration of I by Aphex Twin
+      fileSize: 1951744, // ~1.9MB after conversion
+      format: 'MP3',
+      userId: 'soundshare',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'demo-tha',
+      title: 'Tha - Aphex Twin',
+      filename: 'tha-aphex-twin.mp3',
+      fileUrl: '/tha-aphex-twin.mp3',
+      filePath: '/tha-aphex-twin.mp3',
+      duration: 0, // Will be determined by audio player
+      fileSize: 1258496, // ~1.2MB
+      format: 'MP3',
+      userId: 'soundshare',
+      createdAt: new Date().toISOString()
+    }
+  ];
 
-  // Combine default track with user tracks
-  const allTracks = [defaultTrack, ...tracks];
+  // Combine demo tracks with user tracks
+  const allTracks = [...demoTracks, ...tracks];
   const featuredTracks = allTracks.slice(0, 10);
 
   return (

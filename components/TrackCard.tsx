@@ -27,6 +27,7 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   const [delayEnabled, setDelayEnabled] = useState(false);
   const [distortionEnabled, setDistortionEnabled] = useState(false);
   const [chorusEnabled, setChorusEnabled] = useState(false);
+  const [envelopeEnabled, setEnvelopeEnabled] = useState(false);
 
   // Mastering toggles (simple presets) - now supports multiple simultaneous presets
   const [masteringPresets, setMasteringPresets] = useState<string[]>([]);
@@ -43,12 +44,19 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   const [chorusFrequency, setChorusFrequency] = useState(1.5);
   const [chorusMix, setChorusMix] = useState(0.23);      // 0 = dry, 1 = wet (reduced from 0.5)
 
+  // ADSR Envelope parameters
+  const [attack, setAttack] = useState(0.01);     // Attack time in seconds (0.01 = instant)
+  const [decay, setDecay] = useState(0.1);        // Decay time in seconds
+  const [sustain, setSustain] = useState(1);      // Sustain level (0-1, 1 = full volume)
+  const [release, setRelease] = useState(0.5);    // Release time in seconds
+
   const playerRef = useRef<Tone.Player | null>(null);
   const pitchShifterRef = useRef<Tone.PitchShift | null>(null);
   const reverbRef = useRef<Tone.Reverb | null>(null);
   const delayRef = useRef<Tone.FeedbackDelay | null>(null);
   const distortionRef = useRef<Tone.Distortion | null>(null);
   const chorusRef = useRef<Tone.Chorus | null>(null);
+  const envelopeRef = useRef<Tone.AmplitudeEnvelope | null>(null);
 
   // Mastering chain (EQ3 for simple mastering)
   const eq3Ref = useRef<Tone.EQ3 | null>(null);
@@ -93,6 +101,14 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
           high: 0,
           lowFrequency: 400,
           highFrequency: 2500
+        });
+
+        // Create ADSR Envelope
+        envelopeRef.current = new Tone.AmplitudeEnvelope({
+          attack: 0.01,
+          decay: 0.1,
+          sustain: 1,
+          release: 0.5
         });
 
         // Create recorder for downloading transformed audio
@@ -166,6 +182,9 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       if (chorusRef.current) {
         chorusRef.current.dispose();
       }
+      if (envelopeRef.current) {
+        envelopeRef.current.dispose();
+      }
       if (eq3Ref.current) {
         eq3Ref.current.dispose();
       }
@@ -231,6 +250,16 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     }
   }, [chorusDepth, chorusFrequency, chorusMix]);
 
+  // Update ADSR envelope parameters
+  useEffect(() => {
+    if (envelopeRef.current) {
+      envelopeRef.current.attack = attack;
+      envelopeRef.current.decay = decay;
+      envelopeRef.current.sustain = sustain;
+      envelopeRef.current.release = release;
+    }
+  }, [attack, decay, sustain, release]);
+
   // Apply mastering presets (supports multiple simultaneous presets, averaged together)
   useEffect(() => {
     if (!eq3Ref.current) return;
@@ -281,8 +310,9 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     if (delayRef.current) delayRef.current.disconnect();
     if (distortionRef.current) distortionRef.current.disconnect();
     if (chorusRef.current) chorusRef.current.disconnect();
+    if (envelopeRef.current) envelopeRef.current.disconnect();
 
-    // Build the effects chain: Pitch -> EQ3 -> [Effects] -> Recorder -> Destination
+    // Build the effects chain: Pitch -> EQ3 -> [Effects] -> Envelope -> Recorder -> Destination
     // Start from EQ3 (mastering is always applied)
     let lastNode: Tone.ToneAudioNode = eq3Ref.current;
 
@@ -306,11 +336,16 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       lastNode = chorusRef.current;
     }
 
+    if (envelopeEnabled && envelopeRef.current) {
+      lastNode.connect(envelopeRef.current);
+      lastNode = envelopeRef.current;
+    }
+
     // Connect to recorder and destination
     lastNode.connect(recorderRef.current);
     lastNode.toDestination();
 
-  }, [reverbEnabled, delayEnabled, distortionEnabled, chorusEnabled]);
+  }, [reverbEnabled, delayEnabled, distortionEnabled, chorusEnabled, envelopeEnabled]);
 
   const togglePlay = async () => {
     if (!playerRef.current) {
@@ -326,11 +361,20 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
         }
+        // Release envelope if enabled
+        if (envelopeEnabled && envelopeRef.current) {
+          envelopeRef.current.triggerRelease();
+        }
         setIsPlaying(false);
       } else {
         console.log('Attempting to play audio from:', track.fileUrl);
         playerRef.current.start();
         setIsPlaying(true);
+
+        // Trigger envelope attack if enabled
+        if (envelopeEnabled && envelopeRef.current) {
+          envelopeRef.current.triggerAttack();
+        }
 
         // Track playback progress
         intervalRef.current = setInterval(() => {
@@ -411,7 +455,7 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     }
 
     // Check if any effects are actually enabled
-    const hasEffects = reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled ||
+    const hasEffects = reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled || envelopeEnabled ||
                        masteringPresets.length > 0 || playbackRate !== 1 || pitchShift !== 0;
 
     if (!hasEffects) {
@@ -459,7 +503,8 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       const formatRecorder = new Tone.Recorder({ mimeType });
 
       // Reconnect the audio chain to the new recorder
-      const lastEffectNode = chorusRef.current && chorusEnabled ? chorusRef.current :
+      const lastEffectNode = envelopeRef.current && envelopeEnabled ? envelopeRef.current :
+                            chorusRef.current && chorusEnabled ? chorusRef.current :
                             distortionRef.current && distortionEnabled ? distortionRef.current :
                             delayRef.current && delayEnabled ? delayRef.current :
                             reverbRef.current && reverbEnabled ? reverbRef.current :
@@ -475,6 +520,11 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
 
       // Play track from beginning to end
       playerRef.current.start();
+
+      // Trigger envelope if enabled
+      if (envelopeEnabled && envelopeRef.current) {
+        envelopeRef.current.triggerAttack();
+      }
 
       // Wait for playback to complete (accounting for playback rate)
       const recordDuration = (duration / playbackRate) * 1000;
@@ -739,13 +789,14 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                   setDelayEnabled(false);
                   setDistortionEnabled(false);
                   setChorusEnabled(false);
+                  setEnvelopeEnabled(false);
                 }}
                 className="text-xs text-gray-500 hover:text-neon-seafoam transition-colors"
               >
                 clear all
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {/* Reverb */}
               <button
                 onClick={() => setReverbEnabled(!reverbEnabled)}
@@ -797,10 +848,23 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                 <div className="text-lg mb-1">✨</div>
                 <div className="text-xs">Chorus</div>
               </button>
+
+              {/* ADSR Envelope */}
+              <button
+                onClick={() => setEnvelopeEnabled(!envelopeEnabled)}
+                className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                  envelopeEnabled
+                    ? 'bg-gradient-to-br from-yellow-500 to-orange-600 text-dark-base shadow-lg border border-orange-500'
+                    : 'bg-dark-elevated text-gray-400 hover:bg-orange-900/30 hover:text-orange-400 border border-transparent'
+                }`}
+              >
+                <div className="text-lg mb-1">📈</div>
+                <div className="text-xs">ADSR</div>
+              </button>
             </div>
 
             {/* Modular Parameter Controls for Active Effects */}
-            {(reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled) && (
+            {(reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled || envelopeEnabled) && (
               <div className="mt-6 space-y-4">
                 {/* Reverb Parameters - Kid-Friendly Design */}
                 {reverbEnabled && (
@@ -1050,6 +1114,151 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* ADSR Envelope Parameters */}
+                {envelopeEnabled && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-orange-500/30 space-y-3">
+                    <div className="text-sm font-medium text-orange-400 flex items-center gap-2">
+                      <span>📈</span> ADSR Envelope Shaper
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Attack */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Attack</span>
+                          <span className="text-orange-400 font-mono">
+                            {attack < 0.05 ? '⚡ Instant' : attack < 0.5 ? '🏃 Fast' : attack < 2 ? '🚶 Slow' : '🐌 Gradual'}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="5"
+                          step="0.01"
+                          value={attack}
+                          onChange={(e) => setAttack(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-orange-400"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>0s</span>
+                          <span>{attack.toFixed(2)}s</span>
+                          <span>5s</span>
+                        </div>
+                      </div>
+
+                      {/* Decay */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Decay</span>
+                          <span className="text-orange-400 font-mono">
+                            {decay < 0.1 ? '💨 Quick' : decay < 0.5 ? '📉 Medium' : '🎿 Long'}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="2"
+                          step="0.01"
+                          value={decay}
+                          onChange={(e) => setDecay(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-orange-400"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>0s</span>
+                          <span>{decay.toFixed(2)}s</span>
+                          <span>2s</span>
+                        </div>
+                      </div>
+
+                      {/* Sustain */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Sustain</span>
+                          <span className="text-orange-400 font-mono">
+                            {Math.round(sustain * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={sustain}
+                          onChange={(e) => setSustain(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-orange-400"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>Silent</span>
+                          <span>Half</span>
+                          <span>Full</span>
+                        </div>
+                      </div>
+
+                      {/* Release */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Release</span>
+                          <span className="text-orange-400 font-mono">
+                            {release < 0.2 ? '✂️ Cut' : release < 1 ? '🎵 Fade' : release < 3 ? '☁️ Soft' : '🌊 Long'}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="0.01"
+                          value={release}
+                          onChange={(e) => setRelease(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-dark-elevated rounded-lg appearance-none cursor-pointer accent-orange-400"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-600">
+                          <span>0s</span>
+                          <span>{release.toFixed(2)}s</span>
+                          <span>10s</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Visual ADSR curve representation */}
+                    <div className="mt-4 p-3 bg-dark-elevated rounded-lg">
+                      <div className="text-xs text-gray-500 mb-2">Envelope Shape Preview</div>
+                      <svg width="100%" height="60" viewBox="0 0 200 60" className="overflow-visible">
+                        {/* Grid lines */}
+                        <line x1="0" y1="60" x2="200" y2="60" stroke="#444" strokeWidth="1"/>
+
+                        {/* ADSR Curve */}
+                        <path
+                          d={`M 0,60
+                              L ${attack * 20},10
+                              L ${attack * 20 + decay * 20},${60 - sustain * 50}
+                              L 150,${60 - sustain * 50}
+                              L ${150 + release * 10},60`}
+                          fill="none"
+                          stroke="url(#adsrGradient)"
+                          strokeWidth="2"
+                        />
+
+                        {/* Gradient definition */}
+                        <defs>
+                          <linearGradient id="adsrGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#f59e0b" />
+                            <stop offset="100%" stopColor="#ea580c" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Labels */}
+                        <text x={attack * 10} y="55" fill="#888" fontSize="8">A</text>
+                        <text x={attack * 20 + decay * 10} y="55" fill="#888" fontSize="8">D</text>
+                        <text x="100" y="55" fill="#888" fontSize="8">S</text>
+                        <text x="160" y="55" fill="#888" fontSize="8">R</text>
+                      </svg>
+                    </div>
+
+                    <p className="text-xs text-gray-500 text-center">
+                      🎹 Shape how your sound evolves over time
+                    </p>
                   </div>
                 )}
               </div>

@@ -12,13 +12,20 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^6.18.0",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "^16.0.0",
+    "prisma": "^6.18.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "soundtouchjs": "^0.2.1",
     "tone": "^15.1.22"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

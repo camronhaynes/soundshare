@@ -1,25 +1,33 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { loadTracks, saveTracks, deleteTrackFromDB, TrackData } from "./db";
+import { useAuth } from "./AuthContext";
 
 export interface Track {
   id: string;
   userId: string;
   title: string;
   filename: string;
-  fileUrl: string; // blob URL
+  fileUrl: string; // Now points to /api/stream/[trackId]
+  filePath: string;
+  duration: number;
   createdAt: string;
   fileSize: number;
   format: string;
+  user?: {
+    id: string;
+    username: string;
+    name: string;
+  };
 }
 
 interface TracksContextType {
   tracks: Track[];
   addTrack: (userId: string, file: File, title: string) => Promise<void>;
   getUserTracks: (userId: string) => Track[];
-  deleteTrack: (trackId: string) => void;
+  deleteTrack: (trackId: string) => Promise<void>;
   isLoading: boolean;
+  loadUserTracks: (username?: string) => Promise<void>;
 }
 
 const TracksContext = createContext<TracksContextType | undefined>(undefined);
@@ -27,91 +35,69 @@ const TracksContext = createContext<TracksContextType | undefined>(undefined);
 export function TracksProvider({ children }: { children: ReactNode }) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Load tracks from IndexedDB on mount
-    async function loadTracksFromDB() {
-      try {
-        const storedTracks = await loadTracks();
-        // Create blob URLs from stored blobs
-        const tracksWithUrls = storedTracks.map((track: TrackData) => ({
-          id: track.id,
-          userId: track.userId,
-          title: track.title,
-          filename: track.filename,
-          fileUrl: URL.createObjectURL(track.fileBlob),
-          createdAt: track.createdAt,
-          fileSize: track.fileSize,
-          format: track.format,
+    // Load tracks on mount or when user changes
+    if (user) {
+      loadUserTracks();
+    } else {
+      setTracks([]);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  const loadUserTracks = async (username?: string) => {
+    setIsLoading(true);
+    try {
+      const url = username
+        ? `/api/tracks?username=${username}`
+        : '/api/tracks';
+
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        // Transform tracks to include fileUrl for streaming
+        const transformedTracks = data.map((track: any) => ({
+          ...track,
+          fileUrl: `/api/stream/${track.id}`, // Use streaming endpoint
         }));
-        setTracks(tracksWithUrls);
-      } catch (error) {
-        console.error("Failed to load tracks:", error);
-        // Clear broken localStorage if it exists
-        try {
-          localStorage.removeItem("soundshare_tracks");
-        } catch (e) {
-          // Ignore
-        }
-      } finally {
-        setIsLoading(false);
+        setTracks(transformedTracks);
       }
+    } catch (error) {
+      console.error("Failed to load tracks:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    loadTracksFromDB();
-  }, []);
-
-  useEffect(() => {
-    // Save tracks to IndexedDB whenever they change
-    if (!isLoading && tracks.length > 0) {
-      // Convert tracks to TrackData format with blobs
-      fetch(tracks[0].fileUrl)
-        .then(async () => {
-          // We need to recreate blobs from URLs for storage
-          // For now, we'll handle this in addTrack
-        })
-        .catch(console.error);
-    }
-  }, [tracks, isLoading]);
+  };
 
   const addTrack = async (userId: string, file: File, title: string) => {
-    const format = file.name.split('.').pop()?.toUpperCase() || 'MP3';
-    const blob = new Blob([file], { type: file.type });
-    const fileUrl = URL.createObjectURL(blob);
-
-    const newTrack: Track = {
-      id: Date.now().toString(),
-      userId,
-      title,
-      filename: file.name,
-      fileUrl,
-      createdAt: new Date().toISOString(),
-      fileSize: file.size,
-      format,
-    };
-
-    // Save to IndexedDB
-    const trackData: TrackData = {
-      id: newTrack.id,
-      userId: newTrack.userId,
-      title: newTrack.title,
-      filename: newTrack.filename,
-      fileBlob: blob,
-      createdAt: newTrack.createdAt,
-      fileSize: newTrack.fileSize,
-      format: newTrack.format,
-    };
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title);
 
     try {
-      // Get all existing tracks
-      const existingTracks = await loadTracks();
-      await saveTracks([...existingTracks, trackData]);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // Update state
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      const newTrack = {
+        ...data.track,
+        fileUrl: `/api/stream/${data.track.id}`,
+      };
+
+      // Update state with the new track
       setTracks((prev) => [newTrack, ...prev]);
     } catch (error) {
       console.error("Failed to save track:", error);
-      throw new Error("Failed to save track. Storage might be full.");
+      throw error;
     }
   };
 
@@ -121,22 +107,23 @@ export function TracksProvider({ children }: { children: ReactNode }) {
 
   const deleteTrack = async (trackId: string) => {
     try {
-      await deleteTrackFromDB(trackId);
-
-      setTracks((prev) => {
-        const track = prev.find((t) => t.id === trackId);
-        if (track?.fileUrl) {
-          URL.revokeObjectURL(track.fileUrl);
-        }
-        return prev.filter((t) => t.id !== trackId);
+      const response = await fetch(`/api/tracks?id=${trackId}`, {
+        method: 'DELETE',
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete track');
+      }
+
+      setTracks((prev) => prev.filter((t) => t.id !== trackId));
     } catch (error) {
       console.error("Failed to delete track:", error);
+      throw error;
     }
   };
 
   return (
-    <TracksContext.Provider value={{ tracks, addTrack, getUserTracks, deleteTrack, isLoading }}>
+    <TracksContext.Provider value={{ tracks, addTrack, getUserTracks, deleteTrack, isLoading, loadUserTracks }}>
       {children}
     </TracksContext.Provider>
   );

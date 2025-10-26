@@ -382,9 +382,39 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const downloadOriginal = async () => {
+    try {
+      // Simple direct download of the original file
+      const response = await fetch(track.fileUrl);
+      const blob = await response.blob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = track.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download:', error);
+      alert('Failed to download file');
+    }
+  };
+
   const downloadTransformed = async () => {
     if (!playerRef.current || !recorderRef.current || !duration) {
       alert('Audio not ready for download');
+      return;
+    }
+
+    // Check if any effects are actually enabled
+    const hasEffects = reverbEnabled || delayEnabled || distortionEnabled || chorusEnabled ||
+                       masteringPresets.length > 0 || playbackRate !== 1 || pitchShift !== 0;
+
+    if (!hasEffects) {
+      // No effects applied, just download the original file
+      downloadOriginal();
       return;
     }
 

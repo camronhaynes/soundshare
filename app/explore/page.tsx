@@ -3,13 +3,26 @@
 import Link from "next/link";
 import { useTracks } from "@/lib/TracksContext";
 import TrackCard from "@/components/TrackCard";
+import { Track } from "@/lib/TracksContext";
 
 export default function ExplorePage() {
   const { tracks } = useTracks();
 
-  // In a real app, these would be admin-designated featured tracks
-  // For now, we'll show all tracks as "featured"
-  const featuredTracks = tracks.slice(0, 10);
+  // Default demo track that any user can play with
+  const defaultTrack: Track = {
+    id: 'default-demo',
+    title: 'Ocean Avenue (Demo)',
+    filename: 'default-track.mp3',
+    fileUrl: '/default-track.mp3',
+    fileSize: 0, // Will be loaded from actual file
+    format: 'mp3',
+    uploadedBy: 'soundshare',
+    createdAt: new Date().toISOString()
+  };
+
+  // Combine default track with user tracks
+  const allTracks = [defaultTrack, ...tracks];
+  const featuredTracks = allTracks.slice(0, 10);
 
   return (
     <main className="min-h-screen p-8">

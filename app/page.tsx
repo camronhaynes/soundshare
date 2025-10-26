@@ -78,17 +78,32 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CTA Button */}
-          <div className="flex justify-center pt-4">
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
             {user ? (
-              <Link href={`/${user.username}`} className="skeu-button text-lg px-8 py-4">
-                Go to Your Collection
-              </Link>
+              <>
+                <Link href={`/${user.username}`} className="skeu-button text-lg px-8 py-4">
+                  Go to Your Collection
+                </Link>
+                <Link href="/stems" className="skeu-button text-lg px-8 py-4 bg-gradient-to-br from-orange-600 to-red-700">
+                  🎛️ Multi-Stem Mixer
+                </Link>
+              </>
             ) : (
               <Link href="/login" className="skeu-button text-lg px-8 py-4">
                 Sign In to Get Started
               </Link>
             )}
+          </div>
+
+          {/* Quick Links */}
+          <div className="flex justify-center gap-6 pt-4">
+            <Link href="/explore" className="text-neon-blue hover:text-neon-seafoam transition-colors">
+              Explore Tracks
+            </Link>
+            <Link href="/stems" className="text-orange-400 hover:text-orange-300 transition-colors">
+              Stem Mixer
+            </Link>
           </div>
         </div>
       </div>

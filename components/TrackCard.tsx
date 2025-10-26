@@ -21,6 +21,7 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   const [isRecording, setIsRecording] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav' | 'webm'>('mp3');
   const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const [waveformHeights, setWaveformHeights] = useState<number[]>([]);
 
   // Effect toggles
   const [reverbEnabled, setReverbEnabled] = useState(false);
@@ -64,7 +65,15 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   // Recorder for downloading transformed audio
   const recorderRef = useRef<Tone.Recorder | null>(null);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
+
+  // Generate waveform heights on client side only to avoid hydration mismatch
+  useEffect(() => {
+    // Generate random heights for waveform visualization
+    const heights = Array.from({ length: 40 }, () => Math.random() * 60 + 20);
+    setWaveformHeights(heights);
+  }, [track.id]); // Regenerate when track changes
 
   // Initialize Tone.js player and effects chain
   useEffect(() => {
@@ -199,6 +208,12 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   useEffect(() => {
     if (playerRef.current) {
       playerRef.current.playbackRate = playbackRate;
+
+      // If playing, recalculate start time to maintain accurate position
+      if (isPlaying && playerRef.current.state === "started") {
+        // Adjust startTimeRef to account for new playback rate
+        startTimeRef.current = Tone.now() - (currentTime / playbackRate);
+      }
     }
 
     if (pitchShifterRef.current) {
@@ -304,6 +319,14 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   useEffect(() => {
     if (!pitchShifterRef.current || !playerRef.current || !eq3Ref.current || !recorderRef.current) return;
 
+    // Store playback state before rebuilding
+    const isCurrentlyPlaying = playerRef.current.state === "started";
+
+    // If disabling envelope during playback, trigger release before disconnecting
+    if (!envelopeEnabled && envelopeRef.current && isCurrentlyPlaying) {
+      envelopeRef.current.triggerRelease();
+    }
+
     // Disconnect everything first
     eq3Ref.current.disconnect();
     if (reverbRef.current) reverbRef.current.disconnect();
@@ -339,6 +362,11 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     if (envelopeEnabled && envelopeRef.current) {
       lastNode.connect(envelopeRef.current);
       lastNode = envelopeRef.current;
+
+      // If we're enabling envelope during playback, trigger attack immediately
+      if (isCurrentlyPlaying) {
+        envelopeRef.current.triggerAttack();
+      }
     }
 
     // Connect to recorder and destination
@@ -371,6 +399,9 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
         playerRef.current.start();
         setIsPlaying(true);
 
+        // Store the start time (accounting for any previous position)
+        startTimeRef.current = Tone.now() - currentTime;
+
         // Trigger envelope attack if enabled
         if (envelopeEnabled && envelopeRef.current) {
           envelopeRef.current.triggerAttack();
@@ -379,9 +410,20 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
         // Track playback progress
         intervalRef.current = setInterval(() => {
           if (playerRef.current && playerRef.current.state === "started") {
-            // Approximate current time based on Tone.now()
-            const elapsed = Tone.now() - (playerRef.current as any)._startTime || 0;
-            setCurrentTime(elapsed);
+            // Calculate elapsed time since start
+            const elapsed = Tone.now() - startTimeRef.current;
+            // Account for playback rate
+            const adjustedTime = elapsed * playbackRate;
+
+            // Handle looping - reset if we've exceeded duration
+            if (loopEnabled && duration > 0 && adjustedTime >= duration) {
+              const loopedTime = adjustedTime % duration;
+              setCurrentTime(loopedTime);
+              // Reset start time for the new loop
+              startTimeRef.current = Tone.now() - loopedTime;
+            } else {
+              setCurrentTime(Math.min(adjustedTime, duration || adjustedTime));
+            }
           }
         }, 100);
       }
@@ -403,14 +445,38 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
     const wasPlaying = isPlaying;
     if (wasPlaying) {
       playerRef.current.stop();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     }
 
-    playerRef.current.start(0, newTime);
+    // Start playback from the new position
+    playerRef.current.start(0, newTime / playbackRate); // Adjust for playback rate
     setCurrentTime(newTime);
 
+    // Update start time reference for accurate tracking
+    startTimeRef.current = Tone.now() - newTime;
+
     if (!wasPlaying) {
+      // If not playing, stop immediately but keep the position
       playerRef.current.stop();
       setIsPlaying(false);
+    } else {
+      // Restart the progress tracking
+      intervalRef.current = setInterval(() => {
+        if (playerRef.current && playerRef.current.state === "started") {
+          const elapsed = Tone.now() - startTimeRef.current;
+          const adjustedTime = elapsed * playbackRate;
+
+          if (loopEnabled && duration > 0 && adjustedTime >= duration) {
+            const loopedTime = adjustedTime % duration;
+            setCurrentTime(loopedTime);
+            startTimeRef.current = Tone.now() - loopedTime;
+          } else {
+            setCurrentTime(Math.min(adjustedTime, duration || adjustedTime));
+          }
+        }
+      }, 100);
     }
   };
 
@@ -488,7 +554,8 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
           fileExtension = 'mp3';
         } else {
           console.warn('MP3 encoding not supported, falling back to WAV');
-          downloadFormat === 'wav' ? (mimeType = 'audio/wav', fileExtension = 'wav') : null;
+          mimeType = 'audio/wav';
+          fileExtension = 'wav';
         }
       } else if (downloadFormat === 'wav') {
         if (MediaRecorder.isTypeSupported('audio/wav')) {
@@ -594,21 +661,31 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       >
         <div className="h-full flex items-end justify-center gap-0.5 relative">
           {/* Simple waveform visualization */}
-          {[...Array(40)].map((_, i) => {
-            const height = Math.random() * 60 + 20;
-            const progress = duration > 0 ? currentTime / duration : 0;
-            const isPast = i / 40 < progress;
+          {waveformHeights.length > 0 ? (
+            waveformHeights.map((height, i) => {
+              const progress = duration > 0 ? currentTime / duration : 0;
+              const isPast = i / 40 < progress;
 
-            return (
+              return (
+                <div
+                  key={i}
+                  className={`w-1.5 rounded-full transition-colors ${
+                    isPast ? 'bg-neon-blue' : 'bg-gray-600'
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              );
+            })
+          ) : (
+            // Static placeholder pattern for SSR - all bars same height
+            [...Array(40)].map((_, i) => (
               <div
                 key={i}
-                className={`w-1.5 rounded-full transition-colors ${
-                  isPast ? 'bg-neon-blue' : 'bg-gray-600'
-                }`}
-                style={{ height: `${height}%` }}
+                className="w-1.5 rounded-full bg-gray-600"
+                style={{ height: '50%' }}
               />
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
 

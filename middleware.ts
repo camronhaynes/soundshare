@@ -6,8 +6,8 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
 );
 
-// Routes that require authentication
-const protectedRoutes = ['/api/tracks', '/api/upload'];
+// Routes that require authentication (upload routes handle auth internally)
+const protectedRoutes = ['/api/tracks'];
 const authRoutes = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
@@ -56,11 +56,10 @@ export const config = {
   matcher: [
     // Protected API routes
     '/api/tracks/:path*',
-    '/api/upload/:path*',
     // Auth pages
     '/login',
     '/signup',
-    // Skip static files and images
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    // Skip static files, images, and upload endpoints (they handle auth internally)
+    '/((?!_next/static|_next/image|favicon.ico|api/upload|api/stems/upload).*)',
   ],
 };

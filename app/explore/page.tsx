@@ -11,11 +11,13 @@ export default function ExplorePage() {
   // Default demo track that any user can play with
   const defaultTrack: Track = {
     id: 'default-demo',
-    title: 'Ocean Avenue (Demo)',
+    title: 'I - Aphex Twin',
     filename: 'default-track.mp3',
     fileUrl: '/default-track.mp3',
-    fileSize: 0, // Will be loaded from actual file
-    format: 'mp3',
+    filePath: '/default-track.mp3',
+    duration: 77, // 1:17 duration of I by Aphex Twin
+    fileSize: 1951744, // ~1.9MB after conversion
+    format: 'MP3',
     userId: 'soundshare',
     createdAt: new Date().toISOString()
   };

@@ -19,6 +19,8 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   const [showControls, setShowControls] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav' | 'webm'>('mp3');
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
 
   // Effect toggles
   const [reverbEnabled, setReverbEnabled] = useState(false);
@@ -431,9 +433,45 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       }
       playerRef.current.loop = false;
 
+      // Determine MIME type based on selected format
+      let mimeType = 'audio/webm';
+      let fileExtension = 'webm';
+
+      if (downloadFormat === 'mp3') {
+        // Try mp3, but not all browsers support it
+        if (MediaRecorder.isTypeSupported('audio/mpeg')) {
+          mimeType = 'audio/mpeg';
+          fileExtension = 'mp3';
+        } else {
+          console.warn('MP3 encoding not supported, falling back to WAV');
+          downloadFormat === 'wav' ? (mimeType = 'audio/wav', fileExtension = 'wav') : null;
+        }
+      } else if (downloadFormat === 'wav') {
+        if (MediaRecorder.isTypeSupported('audio/wav')) {
+          mimeType = 'audio/wav';
+          fileExtension = 'wav';
+        } else {
+          console.warn('WAV encoding not supported, using WebM');
+        }
+      }
+
+      // Create a new recorder with the specified format
+      const formatRecorder = new Tone.Recorder({ mimeType });
+
+      // Reconnect the audio chain to the new recorder
+      const lastEffectNode = chorusRef.current && chorusEnabled ? chorusRef.current :
+                            distortionRef.current && distortionEnabled ? distortionRef.current :
+                            delayRef.current && delayEnabled ? delayRef.current :
+                            reverbRef.current && reverbEnabled ? reverbRef.current :
+                            eq3Ref.current;
+
+      if (lastEffectNode) {
+        lastEffectNode.connect(formatRecorder);
+      }
+
       // Start recording
       await Tone.start();
-      recorderRef.current.start();
+      formatRecorder.start();
 
       // Play track from beginning to end
       playerRef.current.start();
@@ -443,13 +481,16 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       await new Promise(resolve => setTimeout(resolve, recordDuration + 500));
 
       // Stop recording
-      const recording = await recorderRef.current.stop();
+      const recording = await formatRecorder.stop();
+
+      // Disconnect and dispose the temporary recorder
+      formatRecorder.dispose();
 
       // Create download link
       const url = URL.createObjectURL(recording);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${track.title}_transformed.webm`;
+      a.download = `${track.title}_transformed.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -462,6 +503,7 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
       }
 
       setIsRecording(false);
+      setShowFormatMenu(false);
     } catch (error) {
       console.error('Failed to download:', error);
       alert('Failed to download transformed audio');
@@ -470,7 +512,7 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
   };
 
   return (
-    <div className="glass-card p-6 space-y-4 hover:border-plum-400/30 transition-all">
+    <div className={`glass-card p-6 space-y-4 hover:border-plum-400/30 transition-all ${showFormatMenu ? 'relative z-[10000]' : ''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl font-semibold text-gradient-plum truncate">
@@ -561,18 +603,63 @@ export default function TrackCard({ track, isOwner, onDelete }: TrackCardProps) 
           🎛️ FX
         </button>
 
-        <button
-          onClick={downloadTransformed}
-          disabled={isRecording || !duration}
-          className={`text-xs px-3 py-1.5 rounded transition-colors ${
-            isRecording
-              ? 'bg-neon-pink/30 text-neon-pink cursor-wait'
-              : 'bg-dark-elevated hover:bg-plum-900/30 text-gray-400 hover:text-neon-blue'
-          }`}
-          title="Download with all effects applied"
-        >
-          {isRecording ? '⏺️ Recording...' : '⬇️ Download'}
-        </button>
+        <div className={`relative ${showFormatMenu ? 'z-[10000]' : ''}`}>
+          <div className="flex gap-1">
+            <button
+              onClick={downloadTransformed}
+              disabled={isRecording || !duration}
+              className={`text-xs px-3 py-1.5 rounded-l transition-colors ${
+                isRecording
+                  ? 'bg-neon-pink/30 text-neon-pink cursor-wait'
+                  : 'bg-dark-elevated hover:bg-plum-900/30 text-gray-400 hover:text-neon-blue'
+              }`}
+              title="Download with all effects applied"
+            >
+              {isRecording ? '⏺️ Recording...' : `⬇️ ${downloadFormat.toUpperCase()}`}
+            </button>
+            <button
+              onClick={() => setShowFormatMenu(!showFormatMenu)}
+              disabled={isRecording || !duration}
+              className={`text-xs px-2 py-1.5 rounded-r transition-colors border-l border-gray-700 ${
+                isRecording
+                  ? 'bg-neon-pink/30 text-neon-pink cursor-wait'
+                  : 'bg-dark-elevated hover:bg-plum-900/30 text-gray-400 hover:text-neon-blue'
+              }`}
+              title="Select download format"
+            >
+              ▼
+            </button>
+          </div>
+
+          {showFormatMenu && (
+            <div className="absolute left-full ml-2 top-0 bg-dark-elevated border border-plum-500/30 rounded-lg shadow-xl z-[9999] overflow-hidden min-w-[100px]">
+              <button
+                onClick={() => { setDownloadFormat('mp3'); setShowFormatMenu(false); }}
+                className={`w-full text-left px-4 py-2 text-xs hover:bg-plum-900/30 transition-colors ${
+                  downloadFormat === 'mp3' ? 'text-neon-blue' : 'text-gray-400'
+                }`}
+              >
+                MP3 {downloadFormat === 'mp3' && '✓'}
+              </button>
+              <button
+                onClick={() => { setDownloadFormat('wav'); setShowFormatMenu(false); }}
+                className={`w-full text-left px-4 py-2 text-xs hover:bg-plum-900/30 transition-colors ${
+                  downloadFormat === 'wav' ? 'text-neon-blue' : 'text-gray-400'
+                }`}
+              >
+                WAV {downloadFormat === 'wav' && '✓'}
+              </button>
+              <button
+                onClick={() => { setDownloadFormat('webm'); setShowFormatMenu(false); }}
+                className={`w-full text-left px-4 py-2 text-xs hover:bg-plum-900/30 transition-colors ${
+                  downloadFormat === 'webm' ? 'text-neon-blue' : 'text-gray-400'
+                }`}
+              >
+                WEBM {downloadFormat === 'webm' && '✓'}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="text-xs text-gray-600">
           {formatFileSize(track.fileSize)}
